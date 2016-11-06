@@ -5,7 +5,7 @@ use yii\db\Migration;
 
 class m140930_123135_create_default_auth extends Migration
 {
-    public function up()
+    public function safeUp()
     {
         // Create the auth items
         $this->insert('{{%auth_item}}', [
@@ -38,7 +38,7 @@ class m140930_123135_create_default_auth extends Migration
         ]);
     }
 
-    public function down()
+    public function safeDown()
     {
         echo "m140930_123135_create_default_permissions cannot be reverted.\n";
 

@@ -5,7 +5,6 @@ use kartik\widgets\SideNav;
 
 // The html template for the sidebar items
 $sideBarItemTemplate = '<a href="{url}" title="{label}">{icon}<span class="nav-label">{label}</span></a>';
-
 ?>
 <div class="sidebar-nav navbar-collapse">
     

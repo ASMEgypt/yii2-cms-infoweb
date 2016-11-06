@@ -5,7 +5,7 @@ use yii\db\Migration;
 
 class m150107_074600_create_image_tables extends Migration
 {
-    public function up()
+    public function safeUp()
     {
         $tableOptions = null;
 
@@ -19,40 +19,40 @@ class m150107_074600_create_image_tables extends Migration
         }
 
         $this->createTable('{{%image}}', [
-            'id'         => Schema::TYPE_PK,
-            'name'       => Schema::TYPE_STRING . '(255) NOT NULL',
-            'filePath'   => Schema::TYPE_STRING . '(400) NOT NULL',
-            'itemId'     => Schema::TYPE_STRING . '(255) NOT NULL',
-            'isMain'     => 'TINYINT(3) UNSIGNED NOT NULL DEFAULT \'1\'',
-            'modelName'  => Schema::TYPE_STRING . '(255) NOT NULL',
-            'urlAlias'   => Schema::TYPE_STRING . '(255) NOT NULL',
-            'position'   => Schema::TYPE_INTEGER . ' UNSIGNED NOT NULL',
-            'active'     => 'TINYINT(3) UNSIGNED NOT NULL DEFAULT \'1\'',
-            'created_at' => Schema::TYPE_INTEGER . ' UNSIGNED NOT NULL',
-            'updated_at' => Schema::TYPE_INTEGER . ' UNSIGNED NOT NULL',
+            'id'         => $this->primaryKey(),
+            'name'       => $this->string()->notNull(),
+            'filePath'   => $this->string(400)->notNull(),
+            'itemId'     => $this->string()->notNull(),
+            'isMain'     => $this->integer(3)->unsigned()->notNull()->defaultValue('1'),
+            'modelName'  => $this->string()->notNull(),
+            'urlAlias'   => $this->string()->notNull(),
+            'position'   => $this->integer()->unsigned()->notNull(),
+            'active'     => $this->integer(3)->unsigned()->notNull()->defaultValue('1'),
+            'created_at' => $this->integer()->unsigned()->notNull(),
+            'updated_at' => $this->integer()->unsigned()->notNull(),
         ], $tableOptions);
 
         $this->createIndex('itemId', '{{%image}}', 'itemId');
 
         // Create 'image_lang' table
         $this->createTable('{{%image_lang}}', [
-            'image_id'    => Schema::TYPE_INTEGER . ' NOT NULL',
-            'language'    => Schema::TYPE_STRING . '(10) NOT NULL',
-            'alt'         => Schema::TYPE_STRING . '(255) NOT NULL',
-            'title'       => Schema::TYPE_STRING . '(255) NOT NULL',
+            'image_id'    => $this->integer()->notNull(),
+            'language'    => $this->string(10)->notNull(),
+            'alt'         => $this->string()->notNull(),
+            'title'       => $this->string()->notNull(),
             'subtitle'    => Schema::TYPE_STRING . ' NOT NULL',
             'description' => Schema::TYPE_TEXT . ' NOT NULL',
-            'url'         => Schema::TYPE_STRING . '(255) NOT NULL',
-            'created_at'  => Schema::TYPE_INTEGER . ' UNSIGNED NOT NULL',
-            'updated_at'  => Schema::TYPE_INTEGER . ' UNSIGNED NOT NULL',
+            'url'         => $this->string()->notNull(),
+            'created_at'  => $this->integer()->unsigned()->notNull(),
+            'updated_at'  => $this->integer()->unsigned()->notNull(),
         ], $tableOptions);
 
         $this->addPrimaryKey('image_lang_image_id_language', '{{%image_lang}}', ['image_id', 'language']);
-        $this->createIndex('language', '{{%image_lang}}', 'language');
+        $this->createIndex('image_lang_language_i', '{{%image_lang}}', 'language');
         $this->addForeignKey('FK_IMAGE_LANG_IMAGE_ID', '{{%image_lang}}', 'image_id', '{{%image}}', 'id', 'CASCADE', 'NO ACTION');
     }
 
-    public function down()
+    public function safeDown()
     {
         $this->dropTable('image_lang');
         $this->dropTable('image');

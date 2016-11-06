@@ -2,38 +2,24 @@
 
 namespace infoweb\cms\components;
 
+use infoweb\alias\models\Alias;
 use Yii;
 use yii\base\Component;
 
-use infoweb\alias\models\AliasLang;
 use infoweb\pages\models\Page;
 use infoweb\menu\models\MenuItem;
+use yii\web\NotFoundHttpException;
 
 class Frontend extends Component {
 
-    public $menuItem;
-    public $page;
-    public $parentMenuItem;
-    public $parentPage;
-
-    public function init()
-    {
-        // Must be included at the beginning
-        parent::init();
-
-        $this->page = $this->activePage;
-        $this->menuItem = $this->activeMenuItem;
-        $this->parentMenuItem = $this->activeParentMenuItem;
-        $this->parentPage = $this->activeParentPage;
-    }
-    
-    public function setPage($page)
-    {
-        $this->page = $page;
-        $this->menuItem = $this->activeMenuItem;
-        $this->parentMenuItem = $this->activeParentMenuItem;
-        $this->parentPage = $this->activeParentPage;
-    }
+    protected $menuItem = null;
+    protected $page = null;
+    protected $parentMenuItem = null;
+    protected $parentPage = null;
+    /**
+     * @var Page
+     */
+    protected $homePage = null;
 
     /**
      * Returns a page, based on the alias that is provided in the request or,
@@ -43,37 +29,38 @@ class Frontend extends Component {
      */
     public function getActivePage()
     {
-        // An alias is provided
-        if (Yii::$app->request->get('alias')) {
+        if ($this->page === null) {
+            // An alias is provided
+            if ($alias = Yii::$app->request->get('alias')) {
+                // Load the alias translation
+                $aliasLang = Alias::findOne([
+                    'url' => $alias,
+                    'language' => Yii::$app->language
+                ]);
 
-            // Load the alias translation
-            $aliasLang = AliasLang::findOne([
-                'url'       => Yii::$app->request->get('alias'),
-                'language'  => Yii::$app->language
-            ]);
+                if (!$aliasLang) {
+                    throw new NotFoundHttpException('Page by url "' . $alias . '" is not found');
+                }
 
-            if (!$aliasLang) {
-                return Yii::$app->response->redirect('@web/404');
+                // Get the alias
+                //            $alias = $aliasLang->alias;
+
+                // Get the page
+                $page = $aliasLang->entityModel;
+
+                // The page must be active
+                if ($page->active != 1) {
+                    throw new NotFoundHttpException('Page by url "' . $alias . '" is not found');
+                }
+
+                $this->page = $page;
+            } else {
+                // Load the page that is marked as the 'homepage'
+                $this->page = $this->getHomePage();
             }
-
-            // Get the alias
-            $alias = $aliasLang->alias;
-
-            // Get the page
-            $page = $alias->entityModel;
-
-            // The page must be active
-            if ($page->active != 1) {
-                return Yii::$app->response->redirect('@web/404');
-            }
-
-
-        } else {
-            // Load the page that is marked as the 'homepage'
-            $page = Page::findOne(['homepage' => 1]);
         }
 
-        return $page;
+        return $this->page;
     }
 
     /**
@@ -83,28 +70,28 @@ class Frontend extends Component {
      */
     public function getActiveParentPage()
     {
-        if (isset($this->parentMenuItem->entity_id)) {
+        if (isset($this->activeParentMenuItem->entity_id)) {
             return Page::findOne(['id' => $this->parentMenuItem->entity_id, 'active' => 1]);
-        } else {
-            return new Page;
         }
     }
 
     /**
      * Get the active menu item
      *
-     * @return null|static
+     * @return MenuItem
      */
     public function getActiveMenuItem()
     {
-        $menuItem = MenuItem::findOne([
-            'entity' => MenuItem::ENTITY_PAGE,
-            'entity_id' => $this->page->id,
-            'active' => 1,
-            //'menu_id' => 1, @todo Set correnct menu id?
-        ]);
+        if ($this->menuItem === null) {
+            $this->menuItem = MenuItem::findOne([
+                'entity' => Page::className(),
+                'entity_id' => $this->page->id,
+                'active' => 1,
+                'menu_id' => 3, //@todo Set correnct menu id?
+            ]);
+        }
 
-        return $menuItem;
+        return $this->menuItem;
     }
 
     /**
@@ -114,12 +101,72 @@ class Frontend extends Component {
      */
     public function getActiveParentMenuItem()
     {
-        $menuItem = $this->menuItem->parent;
+        if ($this->parentMenuItem === null) {
+            $menuItem = $this->activeMenuItem->parent;
 
-        if ($menuItem && $menuItem->active = 1) {
-            return $menuItem;
-        } else {
-            return new MenuItem;
+            if ($menuItem && $menuItem->active = 1) {
+                $this->parentMenuItem = $menuItem;
+            } else {
+                $this->parentMenuItem = new MenuItem;
+            }
         }
+
+        return $this->parentMenuItem;
+    }
+
+    public function getActiveNavigationPages() {
+        $homePage = $this->getHomePage();
+        $pages = [];
+        if ($homePage) {
+            $page = $this->getNavigationPageParams($homePage);
+            $pages[] = $page;
+        }
+
+        $activePage = $this->getActivePage();
+        if ($activePage && (!$homePage || $activePage->id !== $homePage->id)) {
+            $activeParentPage = $this->getActiveParentPage();
+            if ($activeParentPage && (!$homePage || $activeParentPage->id !== $homePage->id)) {
+                $activeParentPage = $this->getNavigationPageParams($activeParentPage);
+
+                $pages[] = $activeParentPage;
+            }
+
+            $page = $this->getNavigationPageParams($activePage);
+
+            $pages[] = $page;
+        }
+
+        return $pages;
+    }
+
+    public function getHomePage() {
+        if ($this->homePage === null) {
+            $this->homePage = Page::find()->where('homepage=1')->one();
+        }
+
+        return $this->homePage;
+    }
+
+    /**
+     * @param $activePage
+     * @param $activePageTranslate
+     * @param $activePageSeoTranslate
+     * @return array
+     */
+    protected function getNavigationPageParams($activePage): array
+    {
+        $activePageTranslate = $activePage->translate();
+        $activePageSeoTranslate = $activePage->seo->translate();
+
+        $page = [
+            'url' => $activePage->getUrl(false),
+            'text' => $activePageTranslate->content,
+            'name' => $activePageTranslate->name,
+            'title' => $activePageSeoTranslate->title,
+            'header' => $activePageTranslate->name,
+            'keywords' => $activePageSeoTranslate->keywords,
+            'description' => $activePageSeoTranslate->description,
+        ];
+        return $page;
     }
 }

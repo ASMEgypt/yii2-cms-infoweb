@@ -174,14 +174,19 @@ class Module extends \yii\base\Module
 
     public function initMoxiemanagerSession()
     {
-        $session = new Session;
-        $session->open();
-        $session->name = $this->sessionName;
-        $session['moxieman-is-logged-in'] = true;
-        $session['moxieman-user'] = 'infoweb';
-        $session['moxieman-license-key'] = Yii::$app->params['moxiemanager']['license-key'];
-        $session['moxieman-filesystem-rootpath'] = Yii::getAlias('@uploadsBasePath');
-        $session['moxieman-filesystem-wwwroot'] = Yii::getAlias('@basePath');
-        $session['moxieman-filesystem-urlprefix'] = YII_DEBUG ? Yii::getAlias('@baseUrl') : '/';
+        $session = \yii::$app->session;
+//        $session->name = $this->sessionName;
+        $sessionParams = [
+            'moxieman-is-logged-in' => true,
+            'moxieman-user' => 'infoweb',
+            'moxieman-license-key' => Yii::$app->params['moxiemanager']['license-key'],
+            'moxieman-filesystem-rootpath' => Yii::getAlias('@uploadsBasePath'),
+            'moxieman-filesystem-wwwroot' => Yii::getAlias('@basePath'),
+            'moxieman-filesystem-urlprefix' => YII_DEBUG ? Yii::getAlias('@baseUrl') : '/',
+        ];
+
+        foreach ($sessionParams as $key => $param) {
+            $session->set($key, $param);
+        }
     }
 }

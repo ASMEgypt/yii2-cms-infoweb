@@ -6,11 +6,13 @@ class m150526_084143_update_image_table extends Migration
 {
     public function safeUp()
     {
-        $this->alterColumn('image', 'isMain', 'TINYINT(3) UNSIGNED NOT NULL DEFAULT \'0\'');
+        $this->dropColumn('image', 'isMain');
+        $this->addColumn('image', 'isMain', $this->integer()->defaultValue('0'));
     }
 
     public function safeDown()
     {
-        $this->alterColumn('image', 'isMain', 'TINYINT(3) UNSIGNED NOT NULL DEFAULT \'1\'');
+        $this->dropColumn('image', 'isMain');
+        $this->alterColumn('image', 'isMain', $this->integer(3)->unsigned()->defaultValue('1'));
     }
 }
